@@ -1,0 +1,53 @@
+name: umu-run
+base: core24
+version: 1.3.0
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+summary: Unified launcher for Windows games on Linux
+description: |
+  This is a unified launcher for Windows games on Linux.
+  It is essentially a copy of the Steam Runtime Tools and Steam Linux Runtime that Valve uses for Proton, with some modifications made so that it can be used outside of Steam.
+grade: stable
+confinement: strict
+compression: lzo
+
+apps:
+  umu-run:
+    command: umu-run
+    desktop: meta/gui/umu-run.desktop
+    environment:
+      HOME: $SNAP_REAL_HOME
+      XDG_DATA_HOME: $SNAP_REAL_HOME
+    extensions: [kde-neon-6]
+    plugs:
+      - screen-inhibit-control
+      - home
+      - removable-media
+      - mount-observe
+      - joystick
+      - bluez
+      - udisks2
+      - steam-support
+
+plugs:
+  shared-memory:
+    private: true
+
+parts:
+  umu-launcher-zipapp:
+    plugin: dump
+    source: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/umu-launcher-$SNAPCRAFT_PROJECT_VERSION-zipapp.tar
+    override-build: |
+      craftctl default
+      chmod 755 umu*
+    prime:
+      - umu*
+
+  desktop-file:
+    plugin: dump
+    source: $CRAFT_PROJECT_DIR/gui
+    organize:
+      umu-run.desktop: meta/gui/umu-run.desktop
+    prime: [meta/gui/umu-run.desktop]

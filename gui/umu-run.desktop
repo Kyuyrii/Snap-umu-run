@@ -1,0 +1,9 @@
+[Desktop Entry]
+Exec=umu-run "%f"
+Icon=quickopen-file
+MimeType=application/x-ms-dos-executable;application/x-msi;
+Name=Open with UMU
+NoDisplay=true
+StartupNotify=true
+Terminal=true
+Type=Application
