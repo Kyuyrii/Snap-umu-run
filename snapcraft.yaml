@@ -19,7 +19,6 @@ apps:
     desktop: meta/gui/umu-run.desktop
     environment:
       HOME: $SNAP_REAL_HOME
-      XDG_DATA_HOME: $SNAP_REAL_HOME
     extensions: [kde-neon-6]
     plugs:
       - screen-inhibit-control
@@ -29,7 +28,6 @@ apps:
       - joystick
       - bluez
       - udisks2
-      - steam-support
 
 plugs:
   shared-memory:
