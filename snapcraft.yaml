@@ -16,9 +16,11 @@ compression: lzo
 apps:
   umu-run:
     command: umu-run
-    desktop: meta/gui/umu-run.desktop
+    desktop: umu-run.desktop
+    common-id: org.openwinecomponents.umu.umu-launcher
     environment:
-      HOME: $SNAP_REAL_HOME
+      HOME: $SNAP_USER_COMMON
+      UMU_FOLDERS_PATH: $SNAP_REAL_HOME/App/UMU
     extensions: [kde-neon-6]
     plugs:
       - screen-inhibit-control
@@ -28,6 +30,7 @@ apps:
       - joystick
       - bluez
       - udisks2
+      - umu-support
 
 plugs:
   shared-memory:
@@ -43,9 +46,6 @@ parts:
     prime:
       - umu*
 
-  desktop-file:
+  other-files:
     plugin: dump
-    source: $CRAFT_PROJECT_DIR/gui
-    organize:
-      umu-run.desktop: meta/gui/umu-run.desktop
-    prime: [meta/gui/umu-run.desktop]
+    source: ./other-files
