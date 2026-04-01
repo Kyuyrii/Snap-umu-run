@@ -1,0 +1,108 @@
+#!/bin/bash
+
+# Get the largest icon size from ico file
+get_largest_icon_size() {
+    local ico_file="$1"
+    local max_size=0
+    
+    while IFS= read -r line; do
+        if [[ $line =~ --width=([0-9]+) ]]; then
+            size="${BASH_REMATCH[1]}"
+            [ "$size" -gt "$max_size" ] && max_size=$size
+        fi
+    done < <(icotool -l "$ico_file" 2>/dev/null)
+    
+    echo "$max_size"
+}
+
+# Get game name from executable filename, without extension
+get_game_name() {
+    local filename=$(basename "$1")
+    echo "${filename%.*}"
+}
+
+# Handle the argument, remove quotes
+EXE_FILE="$1"
+
+# Validate executable
+if [ -z "$EXE_FILE" ] || [ ! -f "$EXE_FILE" ]; then
+    zenity --error --text="Error: No valid executable selected."
+    exit 1
+fi
+
+# Get game name
+GAME_NAME=$(get_game_name "$EXE_FILE")
+SAFE_NAME=$(echo "$GAME_NAME" | tr ' ' '_' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_-]/_/g')
+
+# Ask where to create shortcut
+DESKTOP_PATH=$(zenity --file-selection \
+    --title="Where to create the shortcut?" \
+    --directory \
+    --filename="$HOME/Desktop/")
+
+if [ -z "$DESKTOP_PATH" ]; then
+    exit 0
+fi
+
+# Set paths
+EXE_DIR=$(dirname "$EXE_FILE")
+ICON_PATH="$EXE_DIR/$SAFE_NAME.png"
+DESKTOP_FILE="$DESKTOP_PATH/umu-run-$SAFE_NAME.desktop"
+
+# Extract icon
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/game-icon-extraction"
+mkdir -p "$CACHE_DIR"
+cd "$CACHE_DIR"
+
+if wrestool -x -t 14 "$EXE_FILE" > temp.ico 2>/dev/null; then
+    LARGEST_SIZE=$(get_largest_icon_size "temp.ico")
+    
+    if [ -n "$LARGEST_SIZE" ] && [ "$LARGEST_SIZE" -gt 0 ]; then
+        icotool -x -w "$LARGEST_SIZE" -h "$LARGEST_SIZE" "temp.ico" 2>/dev/null
+        PNG_FILE=$(find "$CACHE_DIR" -maxdepth 1 -name "*.png" | head -1)
+        
+        if [ -n "$PNG_FILE" ]; then
+            cp "$PNG_FILE" "$ICON_PATH"
+        fi
+    fi
+fi
+
+# Clean cache
+rm -rf "$CACHE_DIR"
+
+# Check for Wine prefix and build exec line
+WINEPREFIX=$(dirname "$EXE_FILE")
+FOUND_PREFIX=""
+
+while [ "$WINEPREFIX" != "/" ] && [ "$WINEPREFIX" != "." ]; do
+    if [ -d "$WINEPREFIX/drive_c" ]; then
+        FOUND_PREFIX="$WINEPREFIX"
+        break
+    fi
+    WINEPREFIX=$(dirname "$WINEPREFIX")
+done
+
+if [ -n "$FOUND_PREFIX" ]; then
+    EXEC_LINE="env WINEPREFIX=\"$FOUND_PREFIX\" snap run umu-run \"$EXE_FILE\""
+else
+    EXEC_LINE="snap run umu-run \"$EXE_FILE\""
+fi
+
+# Get executable basename for StartupWMClass
+EXE_BASENAME=$(basename "$EXE_FILE")
+
+# Create desktop file
+cat > "$DESKTOP_FILE" << EOF
+[Desktop Entry]
+Name=$GAME_NAME
+Exec=$EXEC_LINE
+Icon=$ICON_PATH
+StartupWMClass=$EXE_BASENAME
+Categories=Game;
+Keywords=gaming;
+Type=Application
+StartupNotify=false
+Terminal=false
+EOF
+
+chmod +x "$DESKTOP_FILE"

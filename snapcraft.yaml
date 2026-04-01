@@ -5,6 +5,9 @@ platforms:
   amd64:
     build-on: [amd64]
     build-for: [amd64]
+  arm64:
+    build-on: [arm64]
+    build-for: [arm64]
 summary: Unified launcher for Windows games on Linux
 description: |
   This is a unified launcher for Windows games on Linux.
@@ -15,14 +18,16 @@ compression: lzo
 
 apps:
   umu-run:
-    command: umu-run
+    command-chain: [define-variables]
+    command: usr/bin/umu-run
     desktop: umu-run.desktop
     common-id: org.openwinecomponents.umu.umu-launcher
-    environment:
-      HOME: $SNAP_USER_COMMON
-      UMU_FOLDERS_PATH: $SNAP_REAL_HOME/App/UMU
-    extensions: [kde-neon-6]
+    extensions: [gnome]
     plugs:
+      - audio-playback
+      - unity7
+      - network
+      - network-bind
       - screen-inhibit-control
       - home
       - removable-media
@@ -30,22 +35,41 @@ apps:
       - joystick
       - bluez
       - udisks2
-      - umu-support
+
+  dot-desktop-creator:
+    command: umu-ddc
+    desktop: umu-ddc.desktop
+    environment:
+      HOME: $SNAP_REAL_HOME
+    extensions: [gnome]
+    plugs:
+      - home
+      - removable-media
+      - mount-observe
 
 plugs:
   shared-memory:
     private: true
 
 parts:
-  umu-launcher-zipapp:
+  umu-run-app:
     plugin: dump
-    source: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/umu-launcher-$SNAPCRAFT_PROJECT_VERSION-zipapp.tar
-    override-build: |
-      craftctl default
-      chmod 755 umu*
-    prime:
-      - umu*
+    source:
+      - on amd64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_amd64_ubuntu-noble.deb
+      - on arm64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_arm64_ubuntu-noble.deb
+
+  dependencies:
+    after: [umu-run-app]
+    plugin: nil
+    stage-packages: [python3-xlib]
+    prime: [usr/lib/python3/dist-packages]
+
+  dot-desktop-creator-dependencies:
+    after: [dependencies]
+    plugin: nil
+    stage-packages: [zenity, icoutils]
 
   other-files:
+    after: [dot-desktop-creator-dependencies]
     plugin: dump
     source: ./other-files

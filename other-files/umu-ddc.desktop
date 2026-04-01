@@ -1,9 +1,9 @@
 [Desktop Entry]
-Name=Open with UMU
-Exec=umu-run %f
+Name=UMU dot desktop creator
+Exec=umu-ddc %f
 Icon=applications-games
 MimeType=application/x-ms-dos-executable;application/x-msi;
 Type=Application
 StartupNotify=false
-Terminal=true
+Terminal=false
 NoDisplay=true
