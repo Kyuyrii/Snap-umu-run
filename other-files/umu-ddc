@@ -4,14 +4,14 @@
 get_largest_icon_size() {
     local ico_file="$1"
     local max_size=0
-    
+
     while IFS= read -r line; do
         if [[ $line =~ --width=([0-9]+) ]]; then
             size="${BASH_REMATCH[1]}"
             [ "$size" -gt "$max_size" ] && max_size=$size
         fi
     done < <(icotool -l "$ico_file" 2>/dev/null)
-    
+
     echo "$max_size"
 }
 
@@ -21,46 +21,48 @@ get_game_name() {
     echo "${filename%.*}"
 }
 
-# Handle the argument, remove quotes
-EXE_FILE="$1"
+# Get desktop directory
+get_desktop_dir() {
+    local desktop="$HOME/Desktop"
+    local config="$HOME/.config/user-dirs.dirs"
 
-# Validate executable
-if [ -z "$EXE_FILE" ] || [ ! -f "$EXE_FILE" ]; then
-    zenity --error --text="Error: No valid executable selected."
-    exit 1
-fi
+    if [ -f "$config" ]; then
+        local xdg=$(grep "^XDG_DESKTOP_DIR=" "$config" | cut -d'=' -f2- | tr -d '"')
+        [ -n "$xdg" ] && desktop="${xdg/#\$HOME/$HOME}"
+    fi
+
+    echo "$desktop"
+}
+
+EXEC_FILE="$1"
 
 # Get game name
-GAME_NAME=$(get_game_name "$EXE_FILE")
+GAME_NAME=$(get_game_name "$EXEC_FILE")
 SAFE_NAME=$(echo "$GAME_NAME" | tr ' ' '_' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_-]/_/g')
 
-# Ask where to create shortcut
-DESKTOP_PATH=$(zenity --file-selection \
-    --title="Where to create the shortcut?" \
-    --directory \
-    --filename="$HOME/Desktop/")
+# Set paths
+EXEC_DIR=$(dirname "$EXEC_FILE")
+ICON_PATH="$EXEC_DIR/$SAFE_NAME.png"
 
-if [ -z "$DESKTOP_PATH" ]; then
-    exit 0
+if snapctl is-connected home; then
+    DOT_DESKTOP_FILE="$(get_desktop_dir)/umu-run-$SAFE_NAME.desktop"
+else
+    mkdir -p "$SNAP_USER_COMMON/Desktop"
+    DOT_DESKTOP_FILE="$SNAP_USER_COMMON/Desktop/umu-run-$SAFE_NAME.desktop"
 fi
 
-# Set paths
-EXE_DIR=$(dirname "$EXE_FILE")
-ICON_PATH="$EXE_DIR/$SAFE_NAME.png"
-DESKTOP_FILE="$DESKTOP_PATH/umu-run-$SAFE_NAME.desktop"
-
 # Extract icon
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/game-icon-extraction"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/umu-ddc"
 mkdir -p "$CACHE_DIR"
 cd "$CACHE_DIR"
 
-if wrestool -x -t 14 "$EXE_FILE" > temp.ico 2>/dev/null; then
+if wrestool -x -t 14 "$EXEC_FILE" > temp.ico 2>/dev/null; then
     LARGEST_SIZE=$(get_largest_icon_size "temp.ico")
-    
+
     if [ -n "$LARGEST_SIZE" ] && [ "$LARGEST_SIZE" -gt 0 ]; then
         icotool -x -w "$LARGEST_SIZE" -h "$LARGEST_SIZE" "temp.ico" 2>/dev/null
         PNG_FILE=$(find "$CACHE_DIR" -maxdepth 1 -name "*.png" | head -1)
-        
+
         if [ -n "$PNG_FILE" ]; then
             cp "$PNG_FILE" "$ICON_PATH"
         fi
@@ -71,7 +73,7 @@ fi
 rm -rf "$CACHE_DIR"
 
 # Check for Wine prefix and build exec line
-WINEPREFIX=$(dirname "$EXE_FILE")
+WINEPREFIX=$(dirname "$EXEC_FILE")
 FOUND_PREFIX=""
 
 while [ "$WINEPREFIX" != "/" ] && [ "$WINEPREFIX" != "." ]; do
@@ -83,26 +85,27 @@ while [ "$WINEPREFIX" != "/" ] && [ "$WINEPREFIX" != "." ]; do
 done
 
 if [ -n "$FOUND_PREFIX" ]; then
-    EXEC_LINE="env WINEPREFIX=\"$FOUND_PREFIX\" snap run umu-run \"$EXE_FILE\""
+    EXECC_LINE="env WINEPREFIX=\"$FOUND_PREFIX\" snap run umu-run \"$EXEC_FILE\""
 else
-    EXEC_LINE="snap run umu-run \"$EXE_FILE\""
+    EXECC_LINE="snap run umu-run \"$EXEC_FILE\""
 fi
 
 # Get executable basename for StartupWMClass
-EXE_BASENAME=$(basename "$EXE_FILE")
+EXEC_BASENAME=$(basename "$EXEC_FILE")
 
 # Create desktop file
-cat > "$DESKTOP_FILE" << EOF
+cat > "$DOT_DESKTOP_FILE" << EOF
 [Desktop Entry]
 Name=$GAME_NAME
-Exec=$EXEC_LINE
+Exec=$EXECC_LINE
 Icon=$ICON_PATH
-StartupWMClass=$EXE_BASENAME
+Path=$EXEC_DIR
+StartupWMClass=$EXEC_BASENAME
 Categories=Game;
 Keywords=gaming;
 Type=Application
 StartupNotify=false
-Terminal=false
+Terminal=true
 EOF
 
-chmod +x "$DESKTOP_FILE"
+chmod +x "$DOT_DESKTOP_FILE"

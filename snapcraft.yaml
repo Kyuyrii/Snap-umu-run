@@ -25,7 +25,6 @@ apps:
     extensions: [gnome]
     plugs:
       - audio-playback
-      - unity7
       - network
       - network-bind
       - screen-inhibit-control
@@ -35,12 +34,9 @@ apps:
       - joystick
       - bluez
       - udisks2
-
   dot-desktop-creator:
     command: umu-ddc
     desktop: umu-ddc.desktop
-    environment:
-      HOME: $SNAP_REAL_HOME
     extensions: [gnome]
     plugs:
       - home
@@ -64,12 +60,12 @@ parts:
     stage-packages: [python3-xlib]
     prime: [usr/lib/python3/dist-packages]
 
-  dot-desktop-creator-dependencies:
+  icoutils:
     after: [dependencies]
     plugin: nil
-    stage-packages: [zenity, icoutils]
+    stage-packages: [icoutils]
 
   other-files:
-    after: [dot-desktop-creator-dependencies]
+    after: [icoutils]
     plugin: dump
     source: ./other-files

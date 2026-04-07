@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=UMU dot desktop creator
+Name=Create desktop shortcut
 Exec=umu-ddc %f
 Icon=applications-games
 MimeType=application/x-ms-dos-executable;application/x-msi;
