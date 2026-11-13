@@ -1,6 +1,6 @@
 name: umu-run
-base: core24
-version: 1.4.0
+base: core26
+version: 1.4.4
 platforms:
   amd64:
     build-on: [amd64]
@@ -15,6 +15,7 @@ description: |
 grade: stable
 confinement: strict
 compression: lzo
+icon: org.openwinecomponents.umu.umu-launcher.png
 
 apps:
   umu-run:
@@ -23,7 +24,12 @@ apps:
     desktop: umu-run.desktop
     common-id: org.openwinecomponents.umu.umu-launcher
     extensions: [gnome]
-    plugs:
+    environment:
+      HOME: $SNAP_USER_COMMON
+      PYTHONPATH: $SNAP/usr/lib/python3/dist-packages:$SNAP/gnome-platform/usr/lib/python3/dist-packages
+      BWRAP: $SNAP/bin/bwrap
+      PRESSURE_VESSEL_BWRAP: $SNAP/bin/bwrap
+    plugs: &plugs
       - audio-playback
       - network
       - network-bind
@@ -34,38 +40,61 @@ apps:
       - joystick
       - bluez
       - udisks2
-  dot-desktop-creator:
-    command: umu-ddc
-    desktop: umu-ddc.desktop
+      - system-observe
+      - hardware-observe
+      - upower-observe
+      - umu-support
+  uddc:
+    command: usr/bin/uddc
+    desktop: uddc.desktop
     extensions: [gnome]
-    plugs:
-      - home
-      - removable-media
-      - mount-observe
+    environment:
+      HOME: $SNAP_USER_DATA
+    plugs: *plugs
 
 plugs:
   shared-memory:
     private: true
 
+layout:
+  /usr/bin/python3:
+    symlink: $SNAP/gnome-platform/usr/bin/python3
+
 parts:
   umu-run-app:
     plugin: dump
     source:
-      - on amd64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_amd64_ubuntu-noble.deb
-      - on arm64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_arm64_ubuntu-noble.deb
+      - on amd64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_amd64_ubuntu-resolute.deb
+      - on arm64: https://github.com/Open-Wine-Components/umu-launcher/releases/download/$SNAPCRAFT_PROJECT_VERSION/python3-umu-launcher_$SNAPCRAFT_PROJECT_VERSION-1_arm64_ubuntu-resolute.deb
 
-  dependencies:
+  umu-run-dependencies:
     after: [umu-run-app]
     plugin: nil
     stage-packages: [python3-xlib]
     prime: [usr/lib/python3/dist-packages]
 
-  icoutils:
-    after: [dependencies]
+  uddc-dependencies:
+    after: [umu-run-dependencies]
     plugin: nil
-    stage-packages: [icoutils]
+    stage-packages: [yad, icoutils]
+    prime:
+      - -usr/bin/bwrap
+
+  proot-next:
+    after: [uddc-dependencies]
+    plugin: nil
+    build-packages: [curl]
+    override-build: |
+      craftctl default
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      curl -fsSL -o "$CRAFT_PART_INSTALL/bin/proot" \
+        "https://github.com/selkies-project/proot-next/releases/download/0.3.9/proot-$(uname -m)"
+      chmod +x "$CRAFT_PART_INSTALL/bin/proot"
+      ln -sf proot "$CRAFT_PART_INSTALL/bin/bwrap"
 
   other-files:
-    after: [icoutils]
+    after: [proot-next]
     plugin: dump
     source: ./other-files
+    organize:
+      uddc: usr/bin/uddc

@@ -1,9 +1,8 @@
 [Desktop Entry]
-Name=Open with UMU
-Exec=umu-run %f
-Icon=applications-games
-MimeType=application/x-ms-dos-executable;application/x-msi;
 Type=Application
-StartupNotify=false
-Terminal=true
+Name=UMU
+Exec=umu-run %f
+MimeType=application/x-ms-dos-executable;application/x-msi
+Icon=org.openwinecomponents.umu.umu-launcher
 NoDisplay=true
+StartupNotify=true

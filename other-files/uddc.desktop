@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=uddc %f
+MimeType=application/x-ms-dos-executable;application/x-msi
+Icon=org.openwinecomponents.umu.umu-launcher
+NoDisplay=true
+StartupNotify=true
+Name=Create .desktop (UMU)
+Name[pt]=Criar .desktop (UMU)
+Name[es]=Crear .desktop (UMU)

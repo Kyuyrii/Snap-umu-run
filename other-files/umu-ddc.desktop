@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Create desktop shortcut
-Exec=umu-ddc %f
-Icon=applications-games
-MimeType=application/x-ms-dos-executable;application/x-msi;
-Type=Application
-StartupNotify=false
-Terminal=false
-NoDisplay=true
