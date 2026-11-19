@@ -145,6 +145,14 @@ get_desktop_dir() {
     echo "$desktop"
 }
 
+get_default_umu_prefix() {
+    if [ -n "$SNAP_USER_COMMON" ]; then
+        echo "$SNAP_USER_COMMON/Games/umu/umu-default"
+    else
+        echo "$HOME/Games/umu/umu-default"
+    fi
+}
+
 get_largest_icon_size() {
     local ico_file="$1" max_size=0 size
     while IFS= read -r line; do
@@ -339,6 +347,11 @@ create_shortcut() {
         candidate=$(dirname "$candidate")
     done
 
+    if [ -z "$found_prefix" ]; then
+        found_prefix="$(get_default_umu_prefix)"
+        mkdir -p "$found_prefix" 2>/dev/null
+    fi
+
     local f_name="$app_name"
     local f_prefix="$found_prefix"
     local f_icon=""
@@ -395,11 +408,6 @@ create_shortcut() {
 
         if [ -z "$p_name" ]; then
             dlg_error "$APP_TITLE" "$(msg name_required)"
-            continue
-        fi
-
-        if [ -z "$p_prefix" ] && [ -z "$found_prefix" ]; then
-            dlg_error "$APP_TITLE" "$(msg prefix_required)"
             continue
         fi
 
